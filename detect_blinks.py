@@ -3,16 +3,20 @@
 # python detect_blinks.py --shape-predictor shape_predictor_68_face_landmarks.dat
 
 # import the necessary packages
+import argparse
+import datetime
+import time
+
 from scipy.spatial import distance as dist
 from imutils.video import FileVideoStream
 from imutils.video import VideoStream
 from imutils import face_utils
+from win10toast import ToastNotifier
 import numpy as np
-import argparse
 import imutils
-import time
 import dlib
 import cv2
+
 
 def eye_aspect_ratio(eye):
 	# compute the euclidean distances between the two sets of
@@ -44,6 +48,9 @@ args = vars(ap.parse_args())
 EYE_AR_THRESH = 0.23
 EYE_AR_CONSEC_FRAMES = 3
 
+# Allowed time (seconds) without blinking
+EYE_BLINKING_THRESH = 30
+
 # initialize the frame counters and the total number of blinks
 COUNTER = 0
 TOTAL = 0
@@ -68,8 +75,19 @@ vs = VideoStream(src=0).start()
 fileStream = False
 time.sleep(1.0)
 
+last_time_blink = datetime.datetime.now()
+
+toaster = ToastNotifier()
+
+
 # loop over frames from the video stream
 while True:
+	if (datetime.datetime.now() - last_time_blink).seconds > EYE_BLINKING_THRESH:
+		toaster.show_toast("Blinking reminder!",
+                   "👀",
+                   duration=2)
+		last_time_blink = datetime.datetime.now()
+		while toaster.notification_active(): time.sleep(0.1)
 	# if this is a file video stream, then we need to check if
 	# there any more frames left in the buffer to process
 	if fileStream and not vs.more():
@@ -122,6 +140,8 @@ while True:
 			# then increment the total number of blinks
 			if COUNTER >= EYE_AR_CONSEC_FRAMES:
 				TOTAL += 1
+				last_time_blink = datetime.datetime.now()
+
 
 			# reset the eye frame counter
 			COUNTER = 0
